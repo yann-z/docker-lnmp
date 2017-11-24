@@ -1,0 +1,55 @@
+ARG image_tag 
+
+FROM php:$image_tag
+
+#ENV TZ=Asia/Shanghai
+
+COPY ./sources_list_aliyun /etc/apt/sources.list
+
+RUN set -xe \
+    && buildDeps=" \
+        build-essential \
+        libfreetype6-dev \
+        libjpeg62-turbo-dev \
+        libmcrypt-dev \
+        libpng12-dev \
+    " \
+    && runtimeDeps=" \
+        libfreetype6 \
+        libjpeg62-turbo \
+        libmcrypt4 \
+        libpng12-0 \
+    " \
+    && DEBIAN_FRONTEND=noninteractive \
+    && apt-get -o Acquire::Check-Valid-Until=false update \
+    && apt-get install -y ${runtimeDeps} ${buildDeps} --no-install-recommends \
+    && docker-php-ext-install iconv mcrypt mysqli pdo pdo_mysql zip \
+    && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ \
+    && docker-php-ext-install gd \
+    && apt-get purge -y --auto-remove \
+        -o APT::AutoRemove::RecommendsImportant=false \
+        -o APT::AutoRemove::SuggestsImportant=false \
+        $buildDeps \
+    && rm -rf /var/cache/apt/* \
+    && rm -rf /var/lib/apt/lists/*
+    
+RUN set -xe \
+    && curl -fsSL 'https://xdebug.org/files/xdebug-2.5.5.tgz' -o xdebug.tar.gz \
+    && mkdir -p xdebug \
+    && tar -xf xdebug.tar.gz -C xdebug --strip-components=1 \
+    && rm xdebug.tar.gz \
+    && ( \
+    cd xdebug \
+    && phpize \
+    && ./configure --enable-xdebug \
+    && make -j$(nproc) \
+    && make install \
+    && make clean \
+    ) \
+    && rm -r xdebug
+    
+#RUN set -xe \
+#    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
+
+#COPY ./php.ini /usr/local/etc/php/php.ini
+#COPY ./xdbug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdbug.ini

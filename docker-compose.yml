@@ -1,0 +1,80 @@
+version: '3'
+
+services:
+
+### Nginx Server Container ##################################
+
+    nginx-1.13:
+      container_name: "nginx-${TAG_NGINX_1_13}"
+      image: nginx:${TAG_NGINX_1_13}
+      volumes:
+        - ${PATH_PROJECT_ROOT}/conf/nginx.conf:/etc/nginx/nginx.conf
+        - ${PATH_PROJECT_ROOT}/conf/nginx_vhost:/etc/nginx/conf.d      
+        - ${PATH_WEB_DATA}/nginx_log:/var/log/nginx
+        - ${PATH_WEB_ROOT}:/var/www/root
+        - ${PATH_WEB_TEST}:/var/www/test
+      networks:
+        - frontend
+      ports:
+        - "8000:80"
+      environment:
+        TZ: "Asia/Shanghai"
+      depends_on:
+        - php-7.1-fpm      
+      restart: always
+
+### PHP-FPM Container #######################################
+
+    php-7.1-fpm:
+      container_name: "php-${TAG_PHP_7_1_FPM}"
+      image: "yann/php:${TAG_PHP_7_1_FPM}"     
+      working_dir: /var/www/root
+      build:
+        context: ./build
+        dockerfile: docker_file_php_7_1_fpm
+        args:
+          - image_tag=${TAG_PHP_7_1_FPM}
+      volumes:
+        - ${PATH_PROJECT_ROOT}/conf/php_docker.conf:/usr/local/etc/php-fpm.d/docker.conf
+        - ${PATH_PROJECT_ROOT}/conf/php.ini:/usr/local/etc/php/php.ini
+        - ${PATH_PROJECT_ROOT}/conf/php_xdbug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdbug.ini
+        - ${PATH_WEB_DATA}/php_log:/usr/local/var/log
+        - ${PATH_WEB_ROOT}:/var/www/root
+        - ${PATH_WEB_TEST}:/var/www/test         
+      networks:
+        - frontend
+        - backend   
+      expose:
+        - "9000"
+      environment:
+        TZ: "Asia/Shanghai"       
+      depends_on:
+        - mysql-5.7      
+      restart: always
+
+### MySQL Container #########################################
+
+    mysql-5.7: 
+      container_name: "mysql-${TAG_MYSQL_5_7}"
+      image: mysql:${TAG_MYSQL_5_7}
+      volumes:
+        - ${PATH_PROJECT_ROOT}/conf/mysql.conf:/etc/mysql/mysql.conf.d/mysqld.cnf
+        - ${PATH_WEB_DATA}/mysql_data:/var/lib/mysql
+        - ${PATH_WEB_DATA}/mysql_log/:/var/log/mysql 
+      networks:
+        - backend
+      ports:
+        - "8006:3306"
+      environment:
+        TZ: "Asia/Shanghai"
+        MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASS}"
+        MYSQL_USER: "${MYSQL_USER_NAME}"
+        MYSQL_PASSWORD: "${MYSQL_USER_PASS}"
+      command: bash -c "chmod a-w /etc/mysql/mysql.conf.d/mysqld.cnf && /entrypoint.sh mysqld"      
+      restart: always
+
+### Networks Setup ##########################################
+    
+networks:
+    frontend:
+    backend:
