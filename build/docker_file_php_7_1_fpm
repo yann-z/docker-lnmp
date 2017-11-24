@@ -2,8 +2,6 @@ ARG image_tag
 
 FROM php:$image_tag
 
-#ENV TZ=Asia/Shanghai
-
 COPY ./sources_list_aliyun /etc/apt/sources.list
 
 RUN set -xe \
@@ -50,6 +48,3 @@ RUN set -xe \
     
 #RUN set -xe \
 #    && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
-
-#COPY ./php.ini /usr/local/etc/php/php.ini
-#COPY ./xdbug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdbug.ini
